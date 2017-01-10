@@ -144,6 +144,7 @@ static int nut_libusb_open(libusb_device_handle **udevp, USBDevice_t *curDevice,
     uint8_t *port_numbers;
     int port_numbers_len;
     char port_string[24];
+    int j;
 	int ret, res;
 	unsigned char buf[20];
 	const unsigned char *p;
@@ -182,8 +183,8 @@ static int nut_libusb_open(libusb_device_handle **udevp, USBDevice_t *curDevice,
 		port_numbers_len = libusb_get_port_numbers(device, port_numbers, USB_MAXIMUM_DEPTH);
 		/* Always at least one port number */
 		snprintf(port_string, sizeof(string), "%03d", port_numbers[0]);
-		for (i = 1; i < port_numbers_len; i++ ) {
-		    snprintf(string, sizeof(port_string), ".%03d", port_numbers[i]);
+		for (j = 1; j < port_numbers_len; j++ ) {
+		    snprintf(string, sizeof(port_string), ".%03d", port_numbers[j]);
 		    strncat(port_string,string,sizeof(port_string)-strlen(port_string));
 		}
 
@@ -217,7 +218,8 @@ static int nut_libusb_open(libusb_device_handle **udevp, USBDevice_t *curDevice,
 		curDevice->VendorID = dev_desc.idVendor;
 		curDevice->ProductID = dev_desc.idProduct;
 		curDevice->bcdDevice = dev_desc.bcdDevice;
-		curDevice->Port = port_string;
+		curDevice->Port = (char *)xmalloc(24);
+		strncpy(curDevice->Port, port_string, 24);
 
 		if (dev_desc.iManufacturer) {
 			ret = libusb_get_string_descriptor_ascii(udev, dev_desc.iManufacturer,
