@@ -271,7 +271,7 @@ static int match_regex_hex(regex_t *preg, int n)
 
 /* private data type: hold a set of compiled regular expressions. */
 typedef struct regex_matcher_data_s {
-	regex_t	*regex[6];
+	regex_t	*regex[7];
 } regex_matcher_data_t;
 
 /* private callback function for regex matches */
@@ -309,6 +309,11 @@ static int match_function_regex(USBDevice_t *hd, void *privdata)
 	if (r != 1) {
 		return r;
 	}
+
+	r = match_regex(data->regex[6], hd->Port);
+    if (r != 1) {
+        return r;
+    }
 	return 1;
 }
 
@@ -320,7 +325,7 @@ static int match_function_regex(USBDevice_t *hd, void *privdata)
  * are REG_ICASE (case insensitive matching) and REG_EXTENDED (use
  * extended regular expressions).  On success, return 0 and store the
  * matcher in *matcher. On error, return -1 with errno set, or return
- * i=1--6 to indicate that the regular expression regex_array[i-1] was
+ * i=1--7 to indicate that the regular expression regex_array[i-1] was
  * ill-formed (an error message can then be retrieved with
  * regerror(3)).
  */
@@ -345,7 +350,7 @@ int USBNewRegexMatcher(USBDeviceMatcher_t **matcher, char **regex, int cflags)
 	m->privdata = (void *)data;
 	m->next = NULL;
 
-	for (i=0; i<6; i++) {
+	for (i=0; i<7; i++) {
 		r = compile_regex(&data->regex[i], regex[i], cflags);
 		if (r == -2) {
 			r = i+1;
@@ -372,7 +377,7 @@ void USBFreeRegexMatcher(USBDeviceMatcher_t *matcher)
 
 	data = (regex_matcher_data_t *)matcher->privdata;
 
-	for (i = 0; i < 6; i++) {
+	for (i = 0; i < 7; i++) {
 		if (!data->regex[i]) {
 			continue;
 		}

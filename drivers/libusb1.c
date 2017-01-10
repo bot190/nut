@@ -32,6 +32,7 @@
 
 #define USB_DRIVER_NAME		"USB communication driver (libusb 1.0)"
 #define USB_DRIVER_VERSION	"0.02"
+#define USB_MAXIMUM_DEPTH 7
 
 /* driver description structure */
 upsdrv_info_t comm_upsdrv_info = {
@@ -60,6 +61,7 @@ void nut_usb_addvars(void)
 	addvar(VAR_VALUE, "productid", "Regular expression to match UPS Product numerical ID (4 digits hexadecimal)");
 
 	addvar(VAR_VALUE, "bus", "Regular expression to match USB bus name");
+	addvar(VAR_VALUE, "port", "Regular expression to match USB port");
 	addvar(VAR_VALUE, "usb_set_altinterface", "Force redundant call to usb_set_altinterface() (value=bAlternateSetting; default=0)");
 
 #ifdef LIBUSB_API_VERSION
@@ -139,6 +141,9 @@ static int nut_libusb_open(libusb_device_handle **udevp, USBDevice_t *curDevice,
 	const struct libusb_interface_descriptor *if_desc;
 	libusb_device_handle *udev;
 	uint8_t bus;
+    uint8_t *port_numbers;
+    int port_numbers_len;
+    char port_string[24];
 	int ret, res;
 	unsigned char buf[20];
 	const unsigned char *p;
@@ -173,6 +178,15 @@ static int nut_libusb_open(libusb_device_handle **udevp, USBDevice_t *curDevice,
 		upsdebugx(2, "Checking device (%04X/%04X)",
 					dev_desc.idVendor, dev_desc.idProduct);
 
+		port_numbers = xmalloc(sizeof(uint8_t)*USB_MAXIMUM_DEPTH);
+		port_numbers_len = libusb_get_port_numbers(device, port_numbers, USB_MAXIMUM_DEPTH);
+		/* Always at least one port number */
+		snprintf(string, sizeof(string), "%03d", port_numbers[0]);
+		for (i = 1; i < port_numbers_len; i++ ) {
+		    snprintf(port_string, sizeof(port_string), ".%03d", port_numbers[i]);
+		    strcat(string,port_string);
+		}
+
 		/* supported vendors are now checked by the supplied matcher */
 
 		/* open the device */
@@ -194,6 +208,7 @@ static int nut_libusb_open(libusb_device_handle **udevp, USBDevice_t *curDevice,
 		free(curDevice->Product);
 		free(curDevice->Serial);
 		free(curDevice->Bus);
+		free(curDevice->Port);
 		memset(curDevice, '\0', sizeof(*curDevice));
 
 		bus = libusb_get_bus_number(device);
@@ -202,6 +217,7 @@ static int nut_libusb_open(libusb_device_handle **udevp, USBDevice_t *curDevice,
 		curDevice->VendorID = dev_desc.idVendor;
 		curDevice->ProductID = dev_desc.idProduct;
 		curDevice->bcdDevice = dev_desc.bcdDevice;
+		curDevice->Port = port_string;
 
 		if (dev_desc.iManufacturer) {
 			ret = libusb_get_string_descriptor_ascii(udev, dev_desc.iManufacturer,
@@ -233,7 +249,9 @@ static int nut_libusb_open(libusb_device_handle **udevp, USBDevice_t *curDevice,
 		upsdebugx(2, "- Product: %s", curDevice->Product ? curDevice->Product : "unknown");
 		upsdebugx(2, "- Serial Number: %s", curDevice->Serial ? curDevice->Serial : "unknown");
 		upsdebugx(2, "- Bus: %s", curDevice->Bus ? curDevice->Bus : "unknown");
+		upsdebugx(2, "- Port: %s", curDevice->Port);
 		upsdebugx(2, "- Device release number: %04x", curDevice->bcdDevice);
+
 
 		/* FIXME: extend to Eaton OEMs (HP, IBM, ...) */
 		if ((curDevice->VendorID == 0x463) && (curDevice->bcdDevice == 0x0202)) {
