@@ -181,10 +181,10 @@ static int nut_libusb_open(libusb_device_handle **udevp, USBDevice_t *curDevice,
 		port_numbers = xmalloc(sizeof(uint8_t)*USB_MAXIMUM_DEPTH);
 		port_numbers_len = libusb_get_port_numbers(device, port_numbers, USB_MAXIMUM_DEPTH);
 		/* Always at least one port number */
-		snprintf(string, sizeof(string), "%03d", port_numbers[0]);
+		snprintf(port_string, sizeof(string), "%3d", port_numbers[0]);
 		for (i = 1; i < port_numbers_len; i++ ) {
-		    snprintf(port_string, sizeof(port_string), ".%03d", port_numbers[i]);
-		    strcat(string,port_string);
+		    snprintf(string, sizeof(port_string), ".%3d", port_numbers[i]);
+		    strncat(port_string,string,sizeof(port_string)-len(port_string));
 		}
 
 		/* supported vendors are now checked by the supplied matcher */
